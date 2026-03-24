@@ -13,6 +13,9 @@ from scipy.interpolate import griddata
 
 from .utils import normalize_frequency
 
+__all__ = ["ecm_allowed", "gyrofrequency", "ecmfrac_calc", "ecm_flux",
+           "ecm_by_freq", "dynamic_spectrum"]
+
 
 def ecm_allowed(n_e, B):
     """

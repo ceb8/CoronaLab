@@ -25,7 +25,7 @@ from sunkit_magex.pfss.grid import Grid
 from corona_lab import corona
 
 
-
+__all__ = ["FieldlineProcessor"]
 
 
 class FieldlineProcessor():
@@ -360,8 +360,11 @@ class FieldlineProcessor():
         ----------
         closed_fieldlines : list of `~astropy.table.QTable`
             List of closed magnetic field lines.
+            Required columns: "radius", "theta", "phi", "ds", "Bmag", "Brad", "Btheta", "Bphi".
+            Optional columns: "s_pos" (path position)
         open_fieldlines : list of `~astropy.table.QTable`
             List of open magnetic field lines.
+            Must have the ame columns as closed_fieldlines.
         rss : `~astropy.units.Quantity`
             Source surface radius.
         kappa_power : float
@@ -438,8 +441,12 @@ class FieldlineProcessor():
         # Use the Rhoprom (prominence density) to calculate the prominence number density
         corona_model["ndens"][corona_model["proms"]] = corona_model["Rhoprom"][corona_model["proms"]] / ((c.m_e+c.m_p)/2)
 
-        corona_model = corona.ModelCorona.from_field_lines(corona_model , distance=distance,
-                                                           radius=self.radius, rss=rss)
+        # Add additional metadata we want to carry on
+        corona_model.meta["Mass"] =  self.mass
+        corona_model.meta["Period"] =  self.period
+        corona_model.meta["Radius"] =  self.radius
+        
+        corona_model = corona.ModelCorona.from_field_lines(corona_model , distance=distance, rss=rss)
 
         return corona_model
     

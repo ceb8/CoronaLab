@@ -14,6 +14,8 @@ from scipy.interpolate import griddata
 
 from .utils import normalize_frequency
 
+__all__ = ["kappa_ff", "freefree_image"]
+
 
 def kappa_ff(teff, freq, ni, Z=1.128):
     """

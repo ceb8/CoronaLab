@@ -16,6 +16,7 @@ from skimage.feature import peak_local_max
 
 from .utils import xy2polar
 
+__all__ = ["get_greatest_sep", "smooth_img", "get_image_lobes", "smooth_array"]
 
 def get_greatest_sep(props):
     """
@@ -183,6 +184,18 @@ def get_image_lobes(image_array, px_sz, beam_size):
 
 
 
-
     
+def smooth_array(array, dtype):
+    """
+    Input the data array to be smoothed and what type it is
+    Valid types are lc, sed, and dyn (dyn = 2d dynamic spectrum)
+    """
     
+    if dtype == "lc":
+        return ndimage.gaussian_filter(array, 1, mode='constant', cval=0, truncate=1)
+    elif dtype == "sed":
+        return ndimage.gaussian_filter(array, 3, mode='constant', cval=0, truncate=1)
+    elif dtype == "dyn":
+        return ndimage.gaussian_filter(array, [3,1], mode='constant', cval=0, truncate=1)
+    else:
+        raise ValueError("Unknown array type, valid types are lc, sed, and dyn.")

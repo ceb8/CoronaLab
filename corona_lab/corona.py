@@ -20,6 +20,8 @@ from .ecm import ecmfrac_calc, dynamic_spectrum
 from .utils import parsed_angle, make_serializable, read_serialized, normalize_frequency
 from .analysis import get_image_lobes
 
+__all__ = ["ModelArray", "ModelImage", "ModelDynamicSpectrum",
+           "PhaseCube", "FrequencyCube", "ModelCorona"]
 
 class ModelArray(u.Quantity):
     """
@@ -934,13 +936,13 @@ class ModelCorona(QTable):
         return image
 
     
-    def radio_phase_cube(self, obs_freq, num_steps, sidelen_pix, beam_size, *, sidelen_rad=None,
-                        obs_angle=None, min_phi=0*u.deg, max_phi=360*u.deg):
+    def radio_phase_cube(self, obs_freq, phases, sidelen_pix, beam_size, *, sidelen_rad=None,
+                        obs_angle=None):
         """
         Generate a cube of radio images across a range of rotational phases.
 
         This method computes free-free emission images at a given observation frequency
-        and viewing angle across `num_steps` rotational phases. The resulting data includes
+        and viewing angle across `phases` rotational phases. The resulting data includes
         flux, lobe separations, peak counts, and angular separations for each phase.
 
         Parameters
@@ -948,8 +950,9 @@ class ModelCorona(QTable):
         obs_freq : float or `~astropy.units.Quantity`
             The observation frequency. Will be converted to GHz if not already.
 
-        num_steps : int
-            Number of evenly spaced phases to generate between `min_phi` and `max_phi`.
+        phases : int or `~astropy.units.Quantity`
+            If int, the number of evenly spaced rotational phases from 0° to 360°. 
+            If a `Quantity`, the exact phases (in degrees) to evaluate.
 
         sidelen_pix : int
             Number of pixels per side of the square image.
@@ -963,12 +966,6 @@ class ModelCorona(QTable):
 
         obs_angle : float, tuple, or `~astropy.units.Quantity`, optional
             Observation angle as (phi, theta) in degrees. If None, will use previously set value.
-
-        min_phi : `~astropy.units.Quantity`, optional
-            Starting rotational phase angle in degrees. Default is 0°.
-
-        max_phi : `~astropy.units.Quantity`, optional
-            Ending rotational phase angle in degrees. Default is 360°.
 
         Returns
         -------
@@ -1010,26 +1007,26 @@ class ModelCorona(QTable):
         self._add_bb_col(obs_freq)
 
         # Regularising the angles
-        min_phi = parsed_angle(min_phi)
-        max_phi = parsed_angle(max_phi)
         obs_angle = parsed_angle(obs_angle)
     
-        # Get the phases we want
-        phase_list = np.linspace(min_phi, max_phi, num_steps)
+        # Phase preprocessing
+        if isinstance(phases, int):
+            num_phases = phases
+            phases = np.linspace(0, 360, num_phases, endpoint=False)*u.deg
 
         # Go ahead and to this calculation here
         if sidelen_rad is None:
             sidelen_rad = 2*self.meta["Source Surface Radius"]/self.meta["Radius"]
         px_sz = sidelen_rad/sidelen_pix
-        
+    
         cube_dict = {"phi":[], "flux":[], "separation":[], "num_peaks":[], "ang_sep":[], "image":[]}
-        for phase in phase_list:
+        for phs in phases:
 
-            self.add_cartesian_coords(obs_angle, phase)
+            self.add_cartesian_coords(obs_angle, phs)
             image = freefree_image(self, sidelen_pix, sidelen_rad, self.distance, kff_col=f"{obs_freq} Kappa_ff")
             lobes = get_image_lobes(image, px_sz, beam_size)
         
-            cube_dict["phi"].append(phase.to('deg'))
+            cube_dict["phi"].append(phs.to('deg'))
             cube_dict["flux"].append(np.sum(image))
             cube_dict["separation"].append(lobes.meta["Separation"])
             cube_dict["num_peaks"].append(len(lobes))
